@@ -1,17 +1,21 @@
 const express = require('express'); //imports express
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();  //creates server instance
 const PORT = 3000;
+const JWT_SECRET = 'your_secret_key_123';
 
 app.use(express.json());    //tells server to understand json requests
+
+const users = [];   //temporary in-memory storage (like a python list)
 
 app.get('/',(req,res)=>{    //when someone visits '/', send back the response
     res.json({message:'Chat API is running!'});
 });
 
-const users = [];   //temporary in-memory storage (like a python list)
-
-app.post('/register',(req,res)=>{   //handles POST requests to '/register'
+//async/await -> handles operations that take time
+app.post('/register',async(req,res)=>{   //handles POST requests to '/register'
     //destructuring - same as 'username=req.body['username']' in python
     const {username, password} = req.body;  //the JSON data the user sends in the request
 
@@ -24,12 +28,33 @@ app.post('/register',(req,res)=>{   //handles POST requests to '/register'
         return res.status(400).json({error:'Username already taken'});  //'res.status(400)' -> sends back HTTP error code 400 = Bad Request
     }
 
-    users.push({username, password});
+    const hashedPassword = await bcrypt .hash(password,10); //scrambles the password - thw '10' is how many times it scrambles
+    users.push({username, password:hashedPassword});
+
     res.status(201).json({message:`User ${username} registered successfully`}); //'res.status(201)' -> Created successfully
 });
 
-app.get('/users',(req,res)=>{
-    res.json({users:users.map(u=>u.username)});
+app.post('/login',async(req,res) => {
+    const {username, password}=req.body;
+
+    if(!username || !password){
+        return res.status(400).json({error: 'Username and password required'});
+    }
+
+    const user = users.find(u => u.username === username);
+    if(!user){
+        return res.status(400).json({error : 'User not found'});
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);  //checks if the entered password matches the scrambled one
+    if(!isMatch){
+        return res.status(400).json({error : 'Invalid password'});
+    }
+
+    //jwt.sign(...) -> creates a token - like a temporary ID card valid for 24 hours
+    //JWT_SECRET -> the secret key used to sign token - only your server knows this
+    const token = jwt.sign({username}, JWT_SECRET, {expiresIn: '24h'});
+    res.json({message : 'Login successful',token});
 });
 
 app.listen(PORT,()=>{   //start the port on 3000
