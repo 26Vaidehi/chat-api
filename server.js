@@ -6,6 +6,23 @@ const app = express();  //creates server instance
 const PORT = 3000;
 const JWT_SECRET = 'your_secret_key_123';
 
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Access denied. No token provided.' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired token.' });
+        }
+        req.user = user;
+        next();
+    });
+};
+
 app.use(express.json());    //tells server to understand json requests
 
 const users = [];   //temporary in-memory storage (like a python list)
@@ -55,6 +72,10 @@ app.post('/login',async(req,res) => {
     //JWT_SECRET -> the secret key used to sign token - only your server knows this
     const token = jwt.sign({username}, JWT_SECRET, {expiresIn: '24h'});
     res.json({message : 'Login successful',token});
+});
+
+app.get('/profile', authenticateToken, (req,res) => {   //authenticateToken ->  this is the middleware being applied to this route
+    res.json({message : `Welcome ${req.user.username}!`, user:req.user});
 });
 
 app.listen(PORT,()=>{   //start the port on 3000
