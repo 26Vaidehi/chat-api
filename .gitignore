@@ -1,3 +1,4 @@
 //This tells Git to never upload node_modules (66 packages = huge folder, unnecessary) and .env (secret keys — never push these).
 node_modules/
 .env
+test.html
