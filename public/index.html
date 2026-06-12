@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { background: #16213e; padding: 2rem; border-radius: 10px; width: 350px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        h2 { text-align: center; margin-bottom: 1.5rem; color: #0f3460; background: #e94560; padding: 0.5rem; border-radius: 5px; }
+        input { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: none; border-radius: 5px; background: #0f3460; color: #fff; font-size: 14px; }
+        input::placeholder { color: #aaa; }
+        button { width: 100%; padding: 0.75rem; border: none; border-radius: 5px; background: #e94560; color: #fff; font-size: 16px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #c73652; }
+        .toggle { text-align: center; margin-top: 1rem; font-size: 13px; color: #aaa; }
+        .toggle span { color: #e94560; cursor: pointer; }
+        .error { color: #e94560; font-size: 13px; margin-bottom: 0.5rem; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 id="form-title">Login</h2>
+        <p class="error" id="error-msg"></p>
+        <input type="text" id="username" placeholder="Username" />
+        <input type="password" id="password" placeholder="Password" />
+        <div id="room-div" style="display:none">
+            <input type="text" id="room" placeholder="Room name (e.g. general)" />
+        </div>
+        <button onclick="handleSubmit()">Submit</button>
+        <div class="toggle">
+            <span id="toggle-text">Don't have an account? <span onclick="toggleForm()">Register</span></span>
+        </div>
+    </div>
+
+    <script>
+        let isLogin = true;
+
+        function toggleForm() {
+            isLogin = !isLogin;
+            document.getElementById('form-title').innerText = isLogin ? 'Login' : 'Register';
+            document.getElementById('room-div').style.display = isLogin ? 'none' : 'block';
+            document.getElementById('toggle-text').innerHTML = isLogin
+                ? 'Don\'t have an account? <span onclick="toggleForm()">Register</span>'
+                : 'Already have an account? <span onclick="toggleForm()">Login</span>';
+            document.getElementById('error-msg').innerText = '';
+        }
+
+        async function handleSubmit() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const room = document.getElementById('room').value.trim() || 'general';
+
+            if (!username || !password) {
+                document.getElementById('error-msg').innerText = 'Please fill all fields';
+                return;
+            }
+
+            const url = isLogin ? '/login' : '/register';
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    document.getElementById('error-msg').innerText = data.error;
+                    return;
+                }
+
+                if (isLogin) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('username', username);
+                    localStorage.setItem('room', room);
+                    window.location.href = '/chat.html';
+                } else {
+                    document.getElementById('error-msg').innerText = '';
+                    toggleForm();
+                    alert('Registered successfully! Please login.');
+                }
+            } catch (err) {
+                document.getElementById('error-msg').innerText = 'Something went wrong';
+            }
+        }
+    </script>
+</body>
+</html>
